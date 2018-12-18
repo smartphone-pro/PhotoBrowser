@@ -18,27 +18,27 @@ class CoreDataStack {
     
     init() {
         
-        let bundle = NSBundle.mainBundle()
+        let bundle = Bundle.main
         let modelURL =
-        bundle.URLForResource("PhotoBrowser", withExtension:"momd")
-        model = NSManagedObjectModel(contentsOfURL: modelURL!)!
+        bundle.url(forResource: "PhotoBrowser", withExtension:"momd")
+        model = NSManagedObjectModel(contentsOf: modelURL!)!
         
         psc = NSPersistentStoreCoordinator(managedObjectModel:model)
         
-        context = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
+        context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
         context.persistentStoreCoordinator = psc
         
         let documentsURL = applicationDocumentsDirectory()
         let storeURL =
-        documentsURL.URLByAppendingPathComponent("PhotoBrowser.sqlite")
+        documentsURL.appendingPathComponent("PhotoBrowser.sqlite")
         
         let options =
         [NSMigratePersistentStoresAutomaticallyOption: true]
         
         do {
-            try store = psc.addPersistentStoreWithType(NSSQLiteStoreType,
-                configuration: nil,
-                URL: storeURL,
+            try store = psc.addPersistentStore(ofType: NSSQLiteStoreType,
+                configurationName: nil,
+                at: storeURL,
                 options: options)
         } catch {
             debugPrint("Error adding persistent store: \(error)")
@@ -58,9 +58,9 @@ class CoreDataStack {
         }
     }
     
-    func applicationDocumentsDirectory() -> NSURL {
+    func applicationDocumentsDirectory() -> URL {
         
-        let urls = NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask)
+        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         return urls[urls.count-1]
     }
     

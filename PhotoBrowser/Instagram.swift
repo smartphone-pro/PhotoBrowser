@@ -17,14 +17,14 @@ struct Instagram {
         static let redirectURI = "http://www.example.com/"
         static let clientSecret = "7f1ce6147f924afc92dea31f5354ca06"
         
-        case PopularPhotos(String, String)
+        case popularPhotos(String, String)
         case requestOauthCode
         
-        static func requestAccessTokenURLStringAndParms(code: String) -> (URLString: String, Params: [String: AnyObject]) {
+        static func requestAccessTokenURLStringAndParms(_ code: String) -> (URLString: String, Params: [String: AnyObject]) {
             let params = ["client_id": Router.clientID, "client_secret": Router.clientSecret, "grant_type": "authorization_code", "redirect_uri": Router.redirectURI, "code": code]
             let pathString = "/oauth/access_token"
             let urlString = Instagram.Router.baseURLString + pathString
-            return (urlString, params)
+            return (urlString, params as [String : AnyObject])
         }
         
         // MARK: URLRequestConvertible
@@ -32,10 +32,10 @@ struct Instagram {
         var URLRequest: NSMutableURLRequest {
             let result: (path: String, parameters: [String: AnyObject]?) = {
                 switch self {
-                case .PopularPhotos (let userID, let accessToken):
+                case .popularPhotos (let userID, let accessToken):
                     let params = ["access_token": accessToken]
                     let pathString = "/v1/users/" + userID + "/media/recent"
-                    return (pathString, params)
+                    return (pathString, params as [String : AnyObject]?)
                     
                 case .requestOauthCode:
                     let pathString = "/oauth/authorize/?client_id=" + Router.clientID + "&redirect_uri=" + Router.redirectURI + "&response_type=code"
@@ -43,9 +43,9 @@ struct Instagram {
                 }
                 }()
             
-            let baseURL = NSURL(string: Router.baseURLString)!
-            let URLRequest = NSURLRequest(URL: NSURL(string: result.path ,relativeToURL:baseURL)!)
-            let encoding = Alamofire.ParameterEncoding.URL
+            let baseURL = URL(string: Router.baseURLString)!
+            let URLRequest = Foundation.URLRequest(url: URL(string: result.path ,relativeTo:baseURL)!)
+            let encoding = Alamofire.ParameterEncoding.url
             return encoding.encode(URLRequest, parameters: result.parameters).0
         }
     }
@@ -55,27 +55,27 @@ struct Instagram {
 extension Alamofire.Request {
     class func imageResponseSerializer() -> GenericResponseSerializer<UIImage> {
         return GenericResponseSerializer { request, response, data in
-            guard let validData = data where validData.length > 0 else {
-                return .Failure(data, Request.imageDataError())
+            guard let validData = data, validData.count > 0 else {
+                return .failure(data, Request.imageDataError())
             }
             
-            if let image = UIImage(data: validData, scale: UIScreen.mainScreen().scale) {
-                return Result<UIImage>.Success(image)
+            if let image = UIImage(data: validData, scale: UIScreen.main.scale) {
+                return Result<UIImage>.success(image)
             }
             else {
-                return .Failure(data, Request.imageDataError())
+                return .failure(data, Request.imageDataError())
             }
             
         }
     }
     
-    func responseImage(completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<UIImage>) -> Void) -> Self {
+    func responseImage(_ completionHandler: (URLRequest?, HTTPURLResponse?, Result<UIImage>) -> Void) -> Self {
         return response(responseSerializer: Request.imageResponseSerializer(), completionHandler: completionHandler)
     }
     
-    private class func imageDataError() -> NSError {
+    fileprivate class func imageDataError() -> NSError {
         let failureReason = "Failed to create a valid Image from the response data"
-        return Error.errorWithCode(NSURLErrorCannotDecodeContentData, failureReason: failureReason)
+        return Alamofire.Error.errorWithCode(NSURLErrorCannotDecodeContentData, failureReason: failureReason)
     }
 }
 

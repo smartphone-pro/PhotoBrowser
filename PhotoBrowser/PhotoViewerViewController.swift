@@ -13,7 +13,7 @@ class PhotoViewerViewController: UIViewController, UIScrollViewDelegate {
     
     let scrollView = UIScrollView()
     let imageView = UIImageView()
-    let spinner = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
+    let spinner = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
     
     var photoInfo: PhotoInfo?
     
@@ -39,14 +39,14 @@ class PhotoViewerViewController: UIViewController, UIScrollViewDelegate {
         spinner.startAnimating()
         view.addSubview(spinner)
         
-        imageView.contentMode = .ScaleAspectFill
+        imageView.contentMode = .scaleAspectFill
         scrollView.addSubview(imageView)
         
         let width = scrollView.frame.size.width
-        self.imageView.frame = CGRectMake(0, scrollView.frame.size.height/2 - width/2, width, width)
+        self.imageView.frame = CGRect(x: 0, y: scrollView.frame.size.height/2 - width/2, width: width, height: width)
         
-        let sharedImageCache = FICImageCache.sharedImageCache()
-        sharedImageCache.retrieveImageForEntity(photoInfo, withFormatName: KMBigImageFormatName, completionBlock: {
+        let sharedImageCache = FICImageCache.shared()
+        sharedImageCache?.retrieveImage(for: photoInfo, withFormatName: KMBigImageFormatName, completionBlock: {
             (photoInfo, _, image) -> Void in
             self.imageView.image = image
             self.spinner.stopAnimating()
@@ -65,14 +65,14 @@ class PhotoViewerViewController: UIViewController, UIScrollViewDelegate {
     
     // MARK: Gesture Recognizers
     
-    func handleDoubleTap(recognizer: UITapGestureRecognizer!) {
-        let pointInView = recognizer.locationInView(self.imageView)
+    func handleDoubleTap(_ recognizer: UITapGestureRecognizer!) {
+        let pointInView = recognizer.location(in: self.imageView)
         self.zoomInZoomOut(pointInView)
     }
     
     // MARK: ScrollView
     
-    func scrollViewDidZoom(scrollView: UIScrollView) {
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
         self.centerScrollViewContents()
     }
     
@@ -95,11 +95,11 @@ class PhotoViewerViewController: UIViewController, UIScrollViewDelegate {
         self.imageView.frame = contentsFrame
     }
     
-    func viewForZoomingInScrollView(scrollView: UIScrollView) -> UIView? {
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         return self.imageView
     }
     
-    func zoomInZoomOut(point: CGPoint!) {
+    func zoomInZoomOut(_ point: CGPoint!) {
         let newZoomScale = self.scrollView.zoomScale > (self.scrollView.maximumZoomScale/2) ? self.scrollView.minimumZoomScale : self.scrollView.maximumZoomScale
         
         let scrollViewSize = self.scrollView.bounds.size
@@ -111,6 +111,6 @@ class PhotoViewerViewController: UIViewController, UIScrollViewDelegate {
         
         let rectToZoom = CGRect(x: x, y: y, width: width, height: height)
         
-        self.scrollView.zoomToRect(rectToZoom, animated: true)
+        self.scrollView.zoom(to: rectToZoom, animated: true)
     }
 }

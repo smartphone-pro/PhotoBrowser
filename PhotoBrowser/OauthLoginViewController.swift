@@ -20,17 +20,17 @@ class OauthLoginViewController: UIViewController {
         super.viewDidLoad()
     }
     
-    override func viewWillAppear(animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        webView.hidden = true
-        NSURLCache.sharedURLCache().removeAllCachedResponses()
-        if let cookies = NSHTTPCookieStorage.sharedHTTPCookieStorage().cookies {
+        webView.isHidden = true
+        URLCache.shared.removeAllCachedResponses()
+        if let cookies = HTTPCookieStorage.shared.cookies {
             for cookie in cookies {
-                NSHTTPCookieStorage.sharedHTTPCookieStorage().deleteCookie(cookie)
+                HTTPCookieStorage.shared.deleteCookie(cookie)
             }
         }
         
-        let request = NSURLRequest(URL: Instagram.Router.requestOauthCode.URLRequest.URL!, cachePolicy: .ReloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 10.0)
+        let request = URLRequest(url: Instagram.Router.requestOauthCode.URLRequest.url!, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 10.0)
         self.webView.loadRequest(request)
     }
     
@@ -38,10 +38,10 @@ class OauthLoginViewController: UIViewController {
         super.didReceiveMemoryWarning()
     }
     
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        if segue.identifier == "unwindToPhotoBrowser" && segue.destinationViewController.isKindOfClass(PhotoBrowserCollectionViewController.classForCoder()) {
-            let photoBrowserCollectionViewController = segue.destinationViewController as! PhotoBrowserCollectionViewController
-            if let user = sender?.valueForKey("user") as? User {
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "unwindToPhotoBrowser" && segue.destination.isKind(of: PhotoBrowserCollectionViewController.classForCoder()) {
+            let photoBrowserCollectionViewController = segue.destination as! PhotoBrowserCollectionViewController
+            if let user = (sender as AnyObject).value(forKey: "user") as? User {
                 photoBrowserCollectionViewController.user = user
                 
             }
@@ -51,11 +51,11 @@ class OauthLoginViewController: UIViewController {
 }
 
 extension OauthLoginViewController: UIWebViewDelegate {
-    func webView(webView: UIWebView, shouldStartLoadWithRequest request: NSURLRequest, navigationType: UIWebViewNavigationType) -> Bool {
+    func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
         debugPrint(request.URLString)
         
-        let redirectURIComponents = NSURLComponents(string: Instagram.Router.redirectURI)!
-        let components = NSURLComponents(string: request.URLString)!
+        let redirectURIComponents = URLComponents(string: Instagram.Router.redirectURI)!
+        let components = URLComponents(string: request.URLString)!
         if components.host == redirectURIComponents.host {
             if let code = (components.queryItems?.filter { $0.name == "code" })?.first?.value {
                 debugPrint(code)
@@ -66,35 +66,35 @@ extension OauthLoginViewController: UIWebViewDelegate {
         return true
     }
     
-    func requestAccessToken(code: String) {
+    func requestAccessToken(_ code: String) {
         let request = Instagram.Router.requestAccessTokenURLStringAndParms(code)
         
         Alamofire.request(.POST, request.URLString, parameters: request.Params)
             .responseJSON {
                 (_, _, result) in
                 switch result {
-                case .Success(let jsonObject):
+                case .success(let jsonObject):
                     //debugPrint(jsonObject)
                     let json = JSON(jsonObject)
                     
-                    if let accessToken = json["access_token"].string, userID = json["user"]["id"].string {
-                        let user = NSEntityDescription.insertNewObjectForEntityForName("User", inManagedObjectContext: self.coreDataStack.context) as! User
+                    if let accessToken = json["access_token"].string, let userID = json["user"]["id"].string {
+                        let user = NSEntityDescription.insertNewObject(forEntityName: "User", into: self.coreDataStack.context) as! User
                         user.userID = userID
                         user.accessToken = accessToken
                         self.coreDataStack.saveContext()
-                        self.performSegueWithIdentifier("unwindToPhotoBrowser", sender: ["user": user])
+                        self.performSegue(withIdentifier: "unwindToPhotoBrowser", sender: ["user": user])
                     }
-                case .Failure:
+                case .failure:
                     break;
                 }
         }
     }
     
-    func webViewDidFinishLoad(webView: UIWebView) {
-        webView.hidden = false
+    func webViewDidFinishLoad(_ webView: UIWebView) {
+        webView.isHidden = false
     }
     
-    func webView(webView: UIWebView, didFailLoadWithError error: NSError?) {
+    func webView(_ webView: UIWebView, didFailLoadWithError error: Error) {
         
     }
 }

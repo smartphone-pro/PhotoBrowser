@@ -35,7 +35,7 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
     var photos = [PhotoInfo]()
     let refreshControl = UIRefreshControl()
     var populatingPhotos = false
-    var nextURLRequest: NSURLRequest?
+    var nextURLRequest: URLRequest?
     var coreDataStack: CoreDataStack!
     
     let PhotoBrowserCellIdentifier = "PhotoBrowserCell"
@@ -47,18 +47,18 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
         super.viewDidLoad()
         setupView()
         
-        if let fetchRequest = coreDataStack.model.fetchRequestTemplateForName("UserFetchRequest") {
+        if let fetchRequest = coreDataStack.model.fetchRequestTemplate(forName: "UserFetchRequest") {
             
-            let results = try! coreDataStack.context.executeFetchRequest(fetchRequest) as! [User]
+            let results = try! coreDataStack.context.fetch(fetchRequest) as! [User]
             user = results.first
         }
         
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if shouldLogin {
-            performSegueWithIdentifier("login", sender: self)
+            performSegue(withIdentifier: "login", sender: self)
             shouldLogin = false
         }
         
@@ -68,30 +68,30 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
         super.didReceiveMemoryWarning()
     }
     
-    @IBAction func unwindToPhotoBrowser (segue : UIStoryboardSegue) {
+    @IBAction func unwindToPhotoBrowser (_ segue : UIStoryboardSegue) {
         
     }
     
     // MARK: CollectionView
     
-    override func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return photos.count
     }
     
-    override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(PhotoBrowserCellIdentifier, forIndexPath: indexPath) as! PhotoBrowserCollectionViewCell
-        let sharedImageCache = FICImageCache.sharedImageCache()
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoBrowserCellIdentifier, for: indexPath) as! PhotoBrowserCollectionViewCell
+        let sharedImageCache = FICImageCache.shared()
         cell.imageView.image = nil
         
         let photo = photos[indexPath.row] as PhotoInfo
         if (cell.photoInfo != photo) {
             
-            sharedImageCache.cancelImageRetrievalForEntity(cell.photoInfo, withFormatName: formatName)
+            sharedImageCache?.cancelImageRetrieval(for: cell.photoInfo, withFormatName: formatName)
             
             cell.photoInfo = photo
         }
         
-        sharedImageCache.retrieveImageForEntity(photo, withFormatName: formatName, completionBlock: {
+        sharedImageCache?.retrieveImage(for: photo, withFormatName: formatName, completionBlock: {
             (photoInfo, _, image) -> Void in
             if (photoInfo as! PhotoInfo) == cell.photoInfo {
                 cell.imageView.image = image
@@ -101,8 +101,8 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
         return cell
     }
     
-    override func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
-        let footerView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: PhotoBrowserFooterViewIdentifier, forIndexPath: indexPath) as! PhotoBrowserLoadingCollectionView
+    override func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+        let footerView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: PhotoBrowserFooterViewIdentifier, for: indexPath) as! PhotoBrowserLoadingCollectionView
         if nextURLRequest == nil {
             footerView.spinner.stopAnimating()
         } else {
@@ -111,14 +111,14 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
         return footerView
     }
     
-    override func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let photoInfo = photos[indexPath.row]
-        performSegueWithIdentifier("show photo", sender: ["photoInfo": photoInfo])
+        performSegue(withIdentifier: "show photo", sender: ["photoInfo": photoInfo])
     }
     
     func setupCollectionViewLayout() {
         let layout = UICollectionViewFlowLayout()
-        let column = UI_USER_INTERFACE_IDIOM() == .Pad ? 4 : 3
+        let column = UI_USER_INTERFACE_IDIOM() == .pad ? 4 : 3
         let itemWidth = floor((view.bounds.size.width - CGFloat(column - 1)) / CGFloat(column))
         layout.itemSize = CGSize(width: itemWidth, height: itemWidth)
         layout.minimumInteritemSpacing = 1.0
@@ -129,23 +129,23 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
     
     func setupView() {
         setupCollectionViewLayout()
-        collectionView!.registerClass(PhotoBrowserCollectionViewCell.classForCoder(), forCellWithReuseIdentifier: PhotoBrowserCellIdentifier)
-        collectionView!.registerClass(PhotoBrowserLoadingCollectionView.classForCoder(), forSupplementaryViewOfKind: UICollectionElementKindSectionFooter, withReuseIdentifier: PhotoBrowserFooterViewIdentifier)
+        collectionView!.register(PhotoBrowserCollectionViewCell.classForCoder(), forCellWithReuseIdentifier: PhotoBrowserCellIdentifier)
+        collectionView!.register(PhotoBrowserLoadingCollectionView.classForCoder(), forSupplementaryViewOfKind: UICollectionElementKindSectionFooter, withReuseIdentifier: PhotoBrowserFooterViewIdentifier)
         
-        refreshControl.tintColor = UIColor.whiteColor()
-        refreshControl.addTarget(self, action: #selector(handleRefresh), forControlEvents: .ValueChanged)
+        refreshControl.tintColor = UIColor.white
+        refreshControl.addTarget(self, action: #selector(handleRefresh), for: .valueChanged)
         collectionView!.addSubview(refreshControl)
     }
     
     
-    override func scrollViewDidScroll(scrollView: UIScrollView) {
+    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         
         if (self.nextURLRequest != nil && scrollView.contentOffset.y + view.frame.size.height > scrollView.contentSize.height * 0.8) {
             populatePhotos(self.nextURLRequest!)
         }
     }
     
-    func populatePhotos(request: URLRequestConvertible) {
+    func populatePhotos(_ request: URLRequestConvertible) {
         
         if populatingPhotos {
             return
@@ -159,14 +159,14 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
                 self.populatingPhotos = false
             }
             switch result {
-            case .Success(let jsonObject):
+            case .success(let jsonObject):
                 //debugPrint(jsonObject)
                 let json = JSON(jsonObject)
                 
                 if (json["meta"]["code"].intValue  == 200) {
-                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)) {
+                    DispatchQueue.global(priority: DispatchQueue.GlobalQueuePriority.high).async {
                         if let urlString = json["pagination"]["next_url"].URL {
-                            self.nextURLRequest = NSURLRequest(URL: urlString)
+                            self.nextURLRequest = URLRequest(url: urlString)
                         } else {
                             self.nextURLRequest = nil
                         }
@@ -179,18 +179,18 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
                             })
                         
                         let lastItem = self.photos.count
-                        self.photos.appendContentsOf(photoInfos)
+                        self.photos.append(contentsOf: photoInfos)
                         
-                        let indexPaths = (lastItem..<self.photos.count).map { NSIndexPath(forItem: $0, inSection: 0) }
+                        let indexPaths = (lastItem..<self.photos.count).map { IndexPath(item: $0, section: 0) }
                         
-                        dispatch_async(dispatch_get_main_queue()) {
-                            self.collectionView!.insertItemsAtIndexPaths(indexPaths)
+                        DispatchQueue.main.async {
+                            self.collectionView!.insertItems(at: indexPaths)
                         }
                         
                     }
                     
                 }
-            case .Failure:
+            case .failure:
                 break;
             }
             
@@ -200,37 +200,37 @@ class PhotoBrowserCollectionViewController: UICollectionViewController, UICollec
     func handleRefresh() {
         nextURLRequest = nil
         refreshControl.beginRefreshing()
-        self.photos.removeAll(keepCapacity: false)
+        self.photos.removeAll(keepingCapacity: false)
         self.collectionView!.reloadData()
         refreshControl.endRefreshing()
         if user != nil {
-            let request = Instagram.Router.PopularPhotos(user!.userID, user!.accessToken)
+            let request = Instagram.Router.popularPhotos(user!.userID, user!.accessToken)
             populatePhotos(request)
         }
     }
     
-    func hideLogoutButtonItem(hide: Bool) {
+    func hideLogoutButtonItem(_ hide: Bool) {
         if hide {
             logoutButtonItem.title = ""
-            logoutButtonItem.enabled = false
+            logoutButtonItem.isEnabled = false
         } else {
             logoutButtonItem.title = "Logout"
-            logoutButtonItem.enabled = true
+            logoutButtonItem.isEnabled = true
         }
     }
     
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        if segue.identifier == "show photo" && segue.destinationViewController.isKindOfClass(PhotoViewerViewController.classForCoder()) {
-            let photoViewerViewController = segue.destinationViewController as! PhotoViewerViewController
-            photoViewerViewController.photoInfo = sender?.valueForKey("photoInfo") as? PhotoInfo
-        } else if segue.identifier == "login" && segue.destinationViewController.isKindOfClass(UINavigationController.classForCoder()) {
-            let navigationController = segue.destinationViewController as! UINavigationController
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "show photo" && segue.destination.isKind(of: PhotoViewerViewController.classForCoder()) {
+            let photoViewerViewController = segue.destination as! PhotoViewerViewController
+            photoViewerViewController.photoInfo = (sender as AnyObject).value(forKey: "photoInfo") as? PhotoInfo
+        } else if segue.identifier == "login" && segue.destination.isKind(of: UINavigationController.classForCoder()) {
+            let navigationController = segue.destination as! UINavigationController
             if let oauthLoginViewController = navigationController.topViewController as? OauthLoginViewController {
                 oauthLoginViewController.coreDataStack = coreDataStack
             }
             
             if self.user != nil {
-                coreDataStack.context.deleteObject(user!)
+                coreDataStack.context.delete(user!)
                 coreDataStack.saveContext()
                 
             }
@@ -257,7 +257,7 @@ class PhotoBrowserCollectionViewCell: UICollectionViewCell {
 }
 
 class PhotoBrowserLoadingCollectionView: UICollectionReusableView {
-    let spinner = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
+    let spinner = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.whiteLarge)
     
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)

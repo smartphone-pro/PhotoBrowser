@@ -11,44 +11,44 @@ import Alamofire
 import FastImageCache
 
 class PhotoInfo: NSObject, FICEntity {
-    var UUID: String {
-        let imageName = sourceImageURL.lastPathComponent!
+    var uuid: String {
+        let imageName = sourceImageURL.lastPathComponent
         let UUIDBytes = FICUUIDBytesFromMD5HashOfString(imageName)
         return FICStringWithUUIDBytes(UUIDBytes)
     }
     
     var sourceImageUUID: String {
-        return UUID
+        return uuid
     }
     
-    var sourceImageURL: NSURL
+    var sourceImageURL: URL
     var request: Alamofire.Request?
     
-    init(sourceImageURL: NSURL) {
+    init(sourceImageURL: URL) {
         self.sourceImageURL = sourceImageURL
         super.init()
     }
 
-    override func isEqual(object: AnyObject?) -> Bool {
-        return (object as! PhotoInfo).UUID == self.UUID
+    override func isEqual(_ object: Any?) -> Bool {
+        return (object as! PhotoInfo).uuid == self.uuid
     }
     
-    func sourceImageURLWithFormatName(formatName: String!) -> NSURL! {
+    func sourceImageURL(withFormatName formatName: String!) -> URL! {
         return sourceImageURL
     }
     
-    func drawingBlockForImage(image: UIImage!, withFormatName formatName: String!) -> FICEntityImageDrawingBlock! {
+    func drawingBlock(for image: UIImage!, withFormatName formatName: String!) -> FICEntityImageDrawingBlock! {
         
         let drawingBlock:FICEntityImageDrawingBlock = {
-            (context:CGContextRef!, contextSize:CGSize) in
-            var contextBounds = CGRectZero
+            (context:CGContext!, contextSize:CGSize) in
+            var contextBounds = CGRect.zero
             contextBounds.size = contextSize
-            CGContextClearRect(context, contextBounds)
+            context.clear(contextBounds)
             
             UIGraphicsPushContext(context)
-            image.drawInRect(contextBounds)
+            image.draw(in: contextBounds)
             UIGraphicsPopContext()
-        }
+        } as! FICEntityImageDrawingBlock
         return drawingBlock
     }
     
